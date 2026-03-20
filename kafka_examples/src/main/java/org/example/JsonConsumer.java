@@ -17,7 +17,7 @@ public class JsonConsumer {
     private Properties props = new Properties();
     private KafkaConsumer<String, Ride> consumer;
     public JsonConsumer() {
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "pkc-75m1o.europe-west3.gcp.confluent.cloud:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "pkc-l6wr6.europe-west2.gcp.confluent.cloud:9092");
         props.put("security.protocol", "SASL_SSL");
         props.put("sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required username='"+Secrets.KAFKA_CLUSTER_KEY+"' password='"+Secrets.KAFKA_CLUSTER_SECRET+"';");
         props.put("sasl.mechanism", "PLAIN");
@@ -34,19 +34,17 @@ public class JsonConsumer {
     }
 
     public void consumeFromKafka() {
-        System.out.println("Consuming form kafka started");
-        var results = consumer.poll(Duration.of(1, ChronoUnit.SECONDS));
+        System.out.println("Consuming from kafka started");
         var i = 0;
-        do {
-
-            for(ConsumerRecord<String, Ride> result: results) {
-                System.out.println(result.value().DOLocationID);
+        while (i < 10) {
+            var results = consumer.poll(Duration.of(1, ChronoUnit.SECONDS));
+            System.out.println("Polled " + results.count() + " records");
+            for (ConsumerRecord<String, Ride> result : results) {
+                System.out.println("DOLocationID: " + result.value().DOLocationID);
             }
-            results =  consumer.poll(Duration.of(1, ChronoUnit.SECONDS));
-            System.out.println("RESULTS:::" + results.count());
+            if (results.isEmpty()) break;
             i++;
         }
-        while(!results.isEmpty() || i < 10);
     }
 
     public static void main(String[] args) {
