@@ -23,6 +23,7 @@ public class JsonProducer {
         props.put("sasl.mechanism", "PLAIN");
         props.put("client.dns.lookup", "use_all_dns_ips");
         props.put("session.timeout.ms", "45000");
+        props.put(ProducerConfig.RETRIES_CONFIG, 3);
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaJsonSerializer");
@@ -39,18 +40,22 @@ public class JsonProducer {
 
     public void publishRides(List<Ride> rides) throws ExecutionException, InterruptedException {
         KafkaProducer<String, Ride> kafkaProducer = new KafkaProducer<String, Ride>(props);
+        int count = 0;
         for(Ride ride: rides) {
             ride.tpep_pickup_datetime = LocalDateTime.now().minusMinutes(20);
             ride.tpep_dropoff_datetime = LocalDateTime.now();
             var record = kafkaProducer.send(new ProducerRecord<>("rides", String.valueOf(ride.DOLocationID), ride), (metadata, exception) -> {
                 if(exception != null) {
-                    System.out.println(exception.getMessage());
+                    System.out.println("Error sending ride: " + exception.getMessage());
                 }
             });
-            System.out.println(record.get().offset());
-            System.out.println(ride.DOLocationID);
+            System.out.println("offset: " + record.get().offset() + ", DOLocationID: " + ride.DOLocationID);
+            count++;
             Thread.sleep(500);
         }
+        System.out.println("Total rides published: " + count);
+        kafkaProducer.flush();
+        kafkaProducer.close();
     }
 
     public static void main(String[] args) throws IOException, CsvException, ExecutionException, InterruptedException {
